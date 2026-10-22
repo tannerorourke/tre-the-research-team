@@ -1,0 +1,27 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    read_ticket[["read ticket"]]:::tool
+    gather_context(["gather context"]):::agent
+    plan(["plan"]):::agent
+    implement(["implement"]):::agent
+    run_tests[["run tests"]]:::tool
+    debug(["debug"]):::agent
+    self_review(["self review"]):::agent
+    finalize[["finalize"]]:::tool
+    S --> read_ticket
+    read_ticket --> gather_context
+    gather_context --> plan
+    plan --> implement
+    implement --> run_tests
+    debug --> run_tests
+    self_review --> finalize
+    finalize --> E
+    run_tests -->|review| self_review
+    run_tests -->|debug| debug
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc

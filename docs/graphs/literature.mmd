@@ -1,0 +1,29 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    pull_context[["pull context"]]:::tool
+    plan_queries(["plan queries"]):::agent
+    search[["search"]]:::tool
+    triage(["triage"]):::agent
+    deep_read[["deep read"]]:::tool
+    annotate[["annotate"]]:::tool
+    synthesize(["synthesize"]):::agent
+    self_critique(["self critique"]):::agent
+    persist[["persist"]]:::tool
+    S --> pull_context
+    pull_context --> plan_queries
+    plan_queries --> search
+    search --> triage
+    triage --> deep_read
+    deep_read --> annotate
+    annotate --> synthesize
+    synthesize --> self_critique
+    persist --> E
+    self_critique -->|revise| synthesize
+    self_critique -->|accept| persist
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc

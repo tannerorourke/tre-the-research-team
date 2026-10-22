@@ -1,0 +1,31 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    load_plan[["load plan"]]:::tool
+    approve_execution{"approve execution"}:::gate
+    abort["abort"]:::task
+    dispatch_wave[["dispatch wave"]]:::tool
+    review_wave[["review wave"]]:::tool
+    fix_wave[["fix wave"]]:::tool
+    integrate[["integrate"]]:::tool
+    report(["report"]):::agent
+    persist_exec[["persist exec"]]:::tool
+    S --> load_plan
+    load_plan --> approve_execution
+    abort --> E
+    dispatch_wave --> review_wave
+    fix_wave --> review_wave
+    report --> persist_exec
+    persist_exec --> E
+    approve_execution -->|go| dispatch_wave
+    approve_execution -->|abort| abort
+    review_wave -->|fix| fix_wave
+    review_wave -->|integrate| integrate
+    integrate -->|next| dispatch_wave
+    integrate -->|report| report
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc

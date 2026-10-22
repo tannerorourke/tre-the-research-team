@@ -1,0 +1,18 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    recon[["recon"]]:::tool
+    draft_adr(["draft adr"]):::agent
+    decompose(["decompose"]):::agent
+    persist_plan[["persist plan"]]:::tool
+    S --> recon
+    recon --> draft_adr
+    draft_adr --> decompose
+    decompose --> persist_plan
+    persist_plan --> E
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc

@@ -1,0 +1,23 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    load_results[["load results"]]:::tool
+    sanity(["sanity"]):::agent
+    compute_stats[["compute stats"]]:::tool
+    interpret(["interpret"]):::agent
+    red_team(["red team"]):::agent
+    persist_analysis[["persist analysis"]]:::tool
+    S --> load_results
+    load_results --> sanity
+    sanity --> compute_stats
+    compute_stats --> interpret
+    interpret --> red_team
+    persist_analysis --> E
+    red_team -->|reinterpret| interpret
+    red_team -->|persist| persist_analysis
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc

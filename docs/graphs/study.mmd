@@ -1,0 +1,102 @@
+flowchart TD
+    S((" ")):::term
+    E(("done")):::term
+    lit_pull_context[["lit pull context"]]:::tool
+    lit_plan_queries(["lit plan queries"]):::agent
+    lit_search[["lit search"]]:::tool
+    lit_triage(["lit triage"]):::agent
+    lit_deep_read[["lit deep read"]]:::tool
+    lit_annotate[["lit annotate"]]:::tool
+    lit_synthesize(["lit synthesize"]):::agent
+    lit_self_critique(["lit self critique"]):::agent
+    lit_persist[["lit persist"]]:::tool
+    des_pull_design_context[["des pull design context"]]:::tool
+    des_hypothesize(["des hypothesize"]):::agent
+    des_draft_design(["des draft design"]):::agent
+    des_feasibility(["des feasibility"]):::agent
+    des_approve_design{"des approve design"}:::gate
+    des_register[["des register"]]:::tool
+    plan_recon[["plan recon"]]:::tool
+    plan_draft_adr(["plan draft adr"]):::agent
+    plan_decompose(["plan decompose"]):::agent
+    plan_persist_plan[["plan persist plan"]]:::tool
+    exec_load_plan[["exec load plan"]]:::tool
+    exec_approve_execution{"exec approve execution"}:::gate
+    exec_abort["exec abort"]:::task
+    exec_dispatch_wave[["exec dispatch wave"]]:::tool
+    exec_review_wave[["exec review wave"]]:::tool
+    exec_fix_wave[["exec fix wave"]]:::tool
+    exec_integrate[["exec integrate"]]:::tool
+    exec_report(["exec report"]):::agent
+    exec_persist_exec[["exec persist exec"]]:::tool
+    ana_load_results[["ana load results"]]:::tool
+    ana_sanity(["ana sanity"]):::agent
+    ana_compute_stats[["ana compute stats"]]:::tool
+    ana_interpret(["ana interpret"]):::agent
+    ana_red_team(["ana red team"]):::agent
+    ana_persist_analysis[["ana persist analysis"]]:::tool
+    kickoff["kickoff"]:::task
+    bridge_lit_design["bridge lit design"]:::task
+    check_design_approval["check design approval"]:::task
+    study_halted["study halted"]:::task
+    bridge_exec_analysis["bridge exec analysis"]:::task
+    retro(["retro"]):::agent
+    iterate_reset["iterate reset"]:::task
+    conclude["conclude"]:::task
+    lit_pull_context --> lit_plan_queries
+    lit_plan_queries --> lit_search
+    lit_search --> lit_triage
+    lit_triage --> lit_deep_read
+    lit_deep_read --> lit_annotate
+    lit_annotate --> lit_synthesize
+    lit_synthesize --> lit_self_critique
+    des_pull_design_context --> des_hypothesize
+    des_hypothesize --> des_draft_design
+    des_draft_design --> des_feasibility
+    des_approve_design --> des_register
+    plan_recon --> plan_draft_adr
+    plan_draft_adr --> plan_decompose
+    plan_decompose --> plan_persist_plan
+    exec_load_plan --> exec_approve_execution
+    exec_dispatch_wave --> exec_review_wave
+    exec_fix_wave --> exec_review_wave
+    exec_report --> exec_persist_exec
+    ana_load_results --> ana_sanity
+    ana_sanity --> ana_compute_stats
+    ana_compute_stats --> ana_interpret
+    ana_interpret --> ana_red_team
+    S --> kickoff
+    kickoff --> lit_pull_context
+    lit_persist --> bridge_lit_design
+    bridge_lit_design --> des_pull_design_context
+    des_register --> check_design_approval
+    study_halted --> E
+    plan_persist_plan --> exec_load_plan
+    exec_abort --> E
+    exec_persist_exec --> bridge_exec_analysis
+    bridge_exec_analysis --> ana_load_results
+    ana_persist_analysis --> retro
+    iterate_reset --> des_pull_design_context
+    conclude --> E
+    lit_self_critique -->|revise| lit_synthesize
+    lit_self_critique -->|accept| lit_persist
+    des_feasibility -->|revise| des_draft_design
+    des_feasibility -->|approve| des_approve_design
+    exec_approve_execution -->|go| exec_dispatch_wave
+    exec_approve_execution -->|abort| exec_abort
+    exec_review_wave -->|fix| exec_fix_wave
+    exec_review_wave -->|integrate| exec_integrate
+    exec_integrate -->|next| exec_dispatch_wave
+    exec_integrate -->|report| exec_report
+    ana_red_team -->|reinterpret| ana_interpret
+    ana_red_team -->|persist| ana_persist_analysis
+    check_design_approval -->|go| plan_recon
+    check_design_approval -->|halt| study_halted
+    retro -->|iterate| iterate_reset
+    retro -->|conclude| conclude
+    classDef agent fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef tool fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef task fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef gate fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef sub fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+    classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc
