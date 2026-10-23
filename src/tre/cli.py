@@ -149,8 +149,6 @@ async def _run_workflow(ctx, name: str, input_arg: str, resume: Optional[str],
         return None
 
 
-# ---------------------------------------------------------------------------
-
 @app.command()
 def init(path: str = typer.Argument(".", help="repository root")) -> None:
     """Attach a TRE lab to a repository: docs/ notebook, knowledge graph,
@@ -257,14 +255,17 @@ def _worker_gone(ctx, run_id: str) -> bool:
 def serve(
     host: str = typer.Option("127.0.0.1", "--host", help="loopback address to bind"),
     port: int = typer.Option(8765, "--port"),
+    stdio: bool = typer.Option(False, "--stdio", help="speak MCP on stdin/stdout for the client that spawned "
+                               "this process; proxies to a daemon already listening on --host:--port"),
 ) -> None:
-    """Run the MCP daemon on streamable HTTP; supervises runs across registered repositories."""
+    """Run the MCP server: a loopback HTTP daemon by default, or stdio for a spawning client."""
     from .serve.daemon import is_loopback, run as run_daemon
     if not is_loopback(host):
         console.print(f"[red]refusing to bind {host!r}: the daemon has no auth and serves loopback only[/]")
         raise typer.Exit(2)
-    console.print(f"[bold blue]tre serve[/] http://{host}:{port}/mcp")
-    run_daemon(host, port)
+    if not stdio:
+        console.print(f"[bold blue]tre serve[/] http://{host}:{port}/mcp")
+    run_daemon(host, port, stdio=stdio)
 
 
 def _workflow_table() -> None:

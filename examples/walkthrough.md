@@ -6,7 +6,6 @@ ordering improves sample efficiency in RLHF fine-tuning.
 ## 0. Attach TRE
 
 ```bash
-tre serve                       # once per machine; or install contrib/tre.service
 cd ~/code/rlhf-curriculum
 tre init .
 ```
@@ -14,8 +13,10 @@ tre init .
 `docs/` now has the notebook scaffold and `charter.md`. Fill the charter's
 research question section (or let the study kickoff journal it for you).
 Then open Claude Code in the repo with the plugin loaded
-(`claude --plugin-dir /path/to/tre-the-research-team`); the `tre` skill
-registers the repo with the daemon the first time you ask for a run.
+(`claude --plugin-dir /path/to/tre-the-research-team`). The plugin spawns
+`tre serve --stdio` for the session, and the `tre` skill registers the repo
+the first time you ask for a run. Run `tre serve` in a terminal, or install
+`contrib/tre.service`, when queued runs should start while no session is open.
 
 ## 1. Talk it through
 

@@ -2,7 +2,7 @@
 
 **A three-agent ML research system that lives on your repository.**
 
-TRE puts a Research Scientist, a Tech Lead, and a Developer on top of any git repo plus a `docs/` notebook. You speak to the Scientist and the Lead from a Claude Code session through the TRE plugin; the Developer works under the Lead; a loopback daemon (`tre serve`) runs the workflows as supervised workers so a study outlives any session. Every role runs typed workflow graphs — built on a purpose-built graph engine over the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) — and everything they learn, decide, build, and conclude lands in the notebook and a research knowledge graph with full lineage: hypothesis → experiment → result.
+TRE puts a Research Scientist, a Tech Lead, and a Developer on top of any git repo plus a `docs/` notebook. You speak to the Scientist and the Lead from a Claude Code session through the TRE plugin; the Developer works under the Lead; a supervisor (`tre serve`) runs the workflows as detached workers so a study outlives any session. Every role runs typed workflow graphs — built on a purpose-built graph engine over the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) — and everything they learn, decide, build, and conclude lands in the notebook and a research knowledge graph with full lineage: hypothesis → experiment → result.
 
 ```mermaid
 graph TD
@@ -157,15 +157,16 @@ flowchart TD
 ## Quickstart
 
 ```bash
-pip install -e .                      # from this repo; Python 3.10+
-tre serve                           # the daemon: one per machine, loopback only (127.0.0.1:8765)
+claude --plugin-dir /path/to/tre-the-research-team     # Claude Code loads the plugin for this session
 ```
 
-`contrib/tre.service` runs the daemon as a systemd user unit; its header holds the install commands. Workers authenticate the way Claude Code does on the machine, or through `ANTHROPIC_API_KEY`.
+The plugin spawns its own MCP server, `tre serve --stdio`, through `uvx` from the plugin directory, so there is nothing to install and nothing runs between sessions. The first spawn builds the package and its dependencies, which takes over a minute on a cold cache and longer than Claude Code waits for a server; warm it once with `uvx --from /path/to/tre-the-research-team tre --help`. Workers authenticate the way Claude Code does on the machine, or through `ANTHROPIC_API_KEY`.
 
-Then, in Claude Code, load the plugin from this checkout (`claude --plugin-dir /path/to/tre`), or attach the daemon to any project with `claude mcp add --transport http tre http://127.0.0.1:8765/mcp`. Ask for a TRE run in plain words; the `tre` skill registers the repository, starts the workflow, watches it to its exit line, and brings each gate to you as a question. The `research-scientist` and `tech-lead` skills put the session in either role's charter for the conversation around a run.
+Ask for a TRE run in plain words; the `tre` skill registers the repository, starts the workflow, watches it to its exit line, and brings each gate to you as a question. The `research-scientist` and `tech-lead` skills put the session in either role's charter for the conversation around a run.
 
-The same runs work from a terminal, streaming live and prompting at gates:
+The daemon is optional. `tre serve` with no flags is one loopback HTTP server per machine on `127.0.0.1:8765` that keeps starting queued runs and relaunching died ones while no session is open. A stdio server probes that port first and proxies to the daemon when one answers, so one supervisor owns the machine's runs. `contrib/tre.service` installs it as a systemd user unit, and `claude mcp add --transport http tre http://127.0.0.1:8765/mcp` attaches it to a project without the plugin.
+
+The same runs work from a terminal after `pip install -e .` from this repo (Python 3.10+), streaming live and prompting at gates:
 
 ```bash
 cd ~/code/my-research-repo
@@ -190,7 +191,7 @@ tre graph study                     # Mermaid for any workflow
 
 ## Serve and the plugin
 
-`tre serve` is a supervisor over durable files, exposed as an MCP server on streamable HTTP. Each run is a `tre run --headless` worker in its own process group; the daemon holds pids and a registry of repository roots (`~/.tre/registry.json`), and everything else lives under `<repo>/.tre/runs/<run_id>/` (`meta.json`, `state.json`, `steps.jsonl`, `events.jsonl`, `worker.json`). A daemon restart rescans the disk: live workers are adopted, a run whose worker died is relaunched once from its checkpoint, and a run waiting at a gate keeps waiting. A gate ends the worker with status `waiting_gate`; `run_answer` starts a resume worker, and the engine's once-per-visit answer queue is untouched.
+`tre serve` is a supervisor over durable files, exposed as an MCP server over streamable HTTP by default or over stdio with `--stdio`, which is how the plugin spawns it. A stdio server probes the HTTP port first and proxies to a daemon that answers, so a machine never has two supervisors counting one concurrency cap. Each run is a `tre run --headless` worker in its own process group; the daemon holds pids and a registry of repository roots (`~/.tre/registry.json`), and everything else lives under `<repo>/.tre/runs/<run_id>/` (`meta.json`, `state.json`, `steps.jsonl`, `events.jsonl`, `worker.json`). A daemon restart rescans the disk: live workers are adopted, a run whose worker died is relaunched once from its checkpoint, and a run waiting at a gate keeps waiting. A gate ends the worker with status `waiting_gate`; `run_answer` starts a resume worker, and the engine's once-per-visit answer queue is untouched.
 
 Every run ends on one line its launcher writes, which is what a watcher looks for:
 
@@ -287,6 +288,6 @@ graph TD
     tools --> memory
 ```
 
-Beside the package: `tests/` (offline on `MockRuntime`, canned papers, and a stub worker; the daemon tests run over real streamable HTTP), `assets/` (the Mermaid exports), `skills/` (the plugin's three skills), `contrib/tre.service`, and `examples/walkthrough.md`.
+Beside the package: `tests/` (offline on `MockRuntime`, canned papers, and a stub worker; the daemon tests run over real streamable HTTP and spawn the stdio server as a subprocess), `assets/` (the Mermaid exports), `skills/` (the plugin's three skills), `contrib/tre.service`, and `examples/walkthrough.md`.
 
 MIT license.

@@ -1,5 +1,6 @@
 """The MCP daemon over real streamable HTTP on an ephemeral loopback port,
-driven by the 'mcp' client, with a stub worker in place of 'tre run'.
+driven by the 'mcp' client, with a stub worker in place of 'tre run'; the
+stdio server as a spawned subprocess, proxying or supervising in-process.
 
     python -m pytest -q tests/test_daemon.py
 """
@@ -16,12 +17,12 @@ import threading
 import time
 
 import pytest
-from mcp import Client
+from mcp import Client, StdioServerParameters
 from typer.testing import CliRunner
 
 from tre.cli import app
 from tre.serve import Registry, Supervisor
-from tre.serve.daemon import Daemon, load_serve_config
+from tre.serve.daemon import Daemon, daemon_listening, load_serve_config
 
 STUB = r'''
 import sys, time
@@ -75,6 +76,23 @@ def daemon(tmp_path):
                 os.killpg(pgid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+
+
+def free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def port_of(url: str) -> int:
+    return int(url.rsplit(":", 1)[1].split("/")[0])
+
+
+# -- HOME is redirected so the subprocess reads and writes a scratch registry
+def stdio_server(tmp_path, port: int) -> StdioServerParameters:
+    return StdioServerParameters(
+        command=sys.executable, args=["-m", "tre.cli", "serve", "--stdio", "--port", str(port)],
+        env={**os.environ, "HOME": str(tmp_path / "home")})
 
 
 def wait_for(pred, timeout: float = 15.0):
@@ -203,3 +221,33 @@ def test_global_cap_comes_from_the_user_config(tmp_path):
     assert load_serve_config(config).max_concurrent_runs == 2
     config.write_text("[serve]\nmax_concurrent_runs = 5\n")
     assert load_serve_config(config).max_concurrent_runs == 5
+
+
+def test_daemon_listening_probes_the_port(daemon):
+    url, _ = daemon
+    assert daemon_listening("127.0.0.1", port_of(url))
+    assert not daemon_listening("127.0.0.1", free_port())
+
+
+async def test_stdio_proxies_to_a_listening_daemon(daemon, tmp_path):
+    url, repo = daemon
+    async with Client(stdio_server(tmp_path, port_of(url))) as proxy, Client(url) as direct:
+        proxied = {t.name for t in (await proxy.list_tools()).tools}
+        assert proxied == {t.name for t in (await direct.list_tools()).tools}
+        assert data(await proxy.call_tool("repo_register", {"path": str(repo)})) == {"repo": str(repo)}
+        assert data(await direct.call_tool("repo_list", {})) == [{"repo": str(repo), "exists": True}]
+        assert await resource(proxy, "tre://repos") == [str(repo)]
+        assert await resource(proxy, "tre://gates") == []
+        missing = await proxy.call_tool("run_start", {"repo": str(repo / "nope"), "workflow": "gate"})
+        assert missing.is_error and "repo_register" in missing.content[0].text
+
+
+async def test_stdio_supervises_in_process_when_no_daemon_listens(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    async with Client(stdio_server(tmp_path, free_port())) as client:
+        assert "run_start" in {t.name for t in (await client.list_tools()).tools}
+        assert data(await client.call_tool("repo_register", {"path": str(repo)})) == {"repo": str(repo)}
+        assert await resource(client, "tre://repos") == [str(repo)]
+    registry = json.loads((tmp_path / "home" / ".tre" / "registry.json").read_text())
+    assert registry["roots"] == [str(repo)]

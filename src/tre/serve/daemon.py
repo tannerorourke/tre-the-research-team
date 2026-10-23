@@ -1,11 +1,15 @@
-"""The TRE MCP daemon: one streamable-HTTP server per machine, on loopback.
+"""The TRE MCP server: a supervisor over on-disk runs, on loopback HTTP or stdio.
 
 Exposes the lab tools per registered repository (each takes 'repo'), the run
 lifecycle through the 'Supervisor', and read-only resources for repositories,
-open gates, and run events. Run state lives on disk; the daemon holds pids,
+open gates, and run events. Run state lives on disk; the process holds pids,
 the registry, and one lazily built 'Context' per repository.
 
+One supervisor per machine: a stdio server first probes the HTTP port and, when
+a daemon answers, proxies every request to it instead of supervising itself.
+
     tre serve [--host 127.0.0.1] [--port 8765]
+    tre serve --stdio
     python -m pytest -q tests/test_daemon.py
 """
 
@@ -15,12 +19,18 @@ import asyncio
 import inspect
 import ipaddress
 import json
+import socket
+import sys
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Collection, Optional, Sequence
+from typing import Any, AsyncIterator, Collection, Optional, Sequence
 
 import anyio
 import uvicorn
+from mcp import Client
+from mcp.server.lowlevel import Server
 from mcp.server.mcpserver import MCPServer
+from mcp.server.stdio import stdio_server
 from mcp.server.mcpserver.exceptions import ResourceNotFoundError, ToolError
 from mcp.types import CallToolResult, TextContent
 
@@ -49,6 +59,28 @@ def is_loopback(host: str) -> bool:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
         return False
+
+
+def daemon_listening(host: str, port: int, timeout: float = 0.5) -> bool:
+    with socket.socket() as sock:
+        sock.settimeout(timeout)
+        return sock.connect_ex((host, port)) == 0
+
+
+# -- resources are read with the cache bypassed: 'tre://gates' changes under
+#    the client, and the daemon is on the same machine
+async def proxy_stdio(url: str) -> None:
+    async with Client(url) as client:
+        server: Server = Server(
+            "tre", version=__version__, instructions=client.instructions,
+            on_list_tools=lambda ctx, params: client.list_tools(),
+            on_call_tool=lambda ctx, params: client.call_tool(params.name, params.arguments),
+            on_list_resources=lambda ctx, params: client.list_resources(cache_mode="bypass"),
+            on_list_resource_templates=lambda ctx, params: client.list_resource_templates(),
+            on_read_resource=lambda ctx, params: client.read_resource(params.uri, cache_mode="bypass"),
+        )
+        async with stdio_server() as (read, write):
+            await server.run(read, write, server.create_initialization_options())
 
 
 # -- the cap spans repositories, so it comes from the user-level config and
@@ -212,24 +244,42 @@ class Daemon:
         return uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_level="warning"))
 
     # -- polling starts queued runs as slots free and reaps exited workers
-    async def serve(self, server: uvicorn.Server, *, sockets: Optional[Sequence] = None,
-                    poll_interval: float = 2.0) -> None:
+    @asynccontextmanager
+    async def polling(self, interval: float = 2.0) -> AsyncIterator[None]:
         async def poll() -> None:
             while True:
                 await anyio.to_thread.run_sync(self.supervisor.poll)
-                await anyio.sleep(poll_interval)
+                await anyio.sleep(interval)
 
         async with anyio.create_task_group() as tg:
             tg.start_soon(poll)
-            await server.serve(sockets=sockets)
+            yield
             tg.cancel_scope.cancel()
 
+    async def serve(self, server: uvicorn.Server, *, sockets: Optional[Sequence] = None,
+                    poll_interval: float = 2.0) -> None:
+        async with self.polling(poll_interval):
+            await server.serve(sockets=sockets)
 
-def run(host: str, port: int, *, registry: Optional[Registry] = None,
+    async def serve_stdio(self, *, poll_interval: float = 2.0) -> None:
+        async with self.polling(poll_interval):
+            await self.mcp.run_stdio_async()
+
+
+def run(host: str, port: int, *, stdio: bool = False, registry: Optional[Registry] = None,
         worker: Sequence[str] = DEFAULT_WORKER, config_path: Path = USER_CONFIG) -> None:
+    url = f"http://{host}:{port}/mcp"
+    if stdio and daemon_listening(host, port):
+        print(f"tre serve --stdio: proxying {url}", file=sys.stderr)
+        anyio.run(proxy_stdio, url)
+        return
     registry = registry or Registry()
     supervisor = Supervisor(registry, worker=worker,
                             max_concurrent=load_serve_config(config_path).max_concurrent_runs)
     supervisor.rescan()
     daemon = Daemon(registry, supervisor)
-    anyio.run(daemon.serve, daemon.http_server(host, port))
+    if stdio:
+        print("tre serve --stdio: supervising in-process", file=sys.stderr)
+        anyio.run(daemon.serve_stdio)
+    else:
+        anyio.run(daemon.serve, daemon.http_server(host, port))

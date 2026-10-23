@@ -29,6 +29,10 @@ tre = "tre.cli:app"
 [tool.hatch.build.targets.wheel]
 packages = ["src/tre"]
 
+# -- uvx rebuilds the plugin's server when its sources change, not only pyproject.toml
+[tool.uv]
+cache-keys = [{ file = "pyproject.toml" }, { file = "src/**/*.py" }]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
