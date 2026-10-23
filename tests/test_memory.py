@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from triad.memory import KnowledgeGraph, LabNotebook, links_of, parse_frontmatter
+from tre.memory import KnowledgeGraph, LabNotebook, links_of, parse_frontmatter
 
 
 def test_notebook_scaffold_create_ids_and_index(tmp_path):

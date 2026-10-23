@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from triad.agents import schemas as S
-from triad.agents.runtime import MockRuntime
-from triad.graph import Runner
-from triad.tools import papers as papers_mod
-from triad.tools.papers import Paper
-from triad.workflows.execution import ExecState, build_execution
-from triad.workflows.literature import LitState, build_literature
+from tre.agents import schemas as S
+from tre.agents.runtime import MockRuntime
+from tre.graph import Runner
+from tre.tools import papers as papers_mod
+from tre.tools.papers import Paper
+from tre.workflows.execution import ExecState, build_execution
+from tre.workflows.literature import LitState, build_literature
 
 from conftest import CANNED_KEYS, make_ctx, schema_factory
 

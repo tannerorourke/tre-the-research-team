@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import Field
 
-from triad.graph import (END, Graph, GraphInterrupt, GraphState, Runner, START,
+from tre.graph import (END, Graph, GraphInterrupt, GraphState, Runner, START,
                          run_to_completion)
 
 

@@ -1,0 +1,8 @@
+{
+  "name": "tre",
+  "version": "0.1.0",
+  "description": "Operate the TRE research lab from Claude Code: start workflow runs on the local tre serve daemon, watch them to their exit line, answer human gates, and take the Research Scientist or Tech Lead charter.",
+  "author": { "name": "Tanner O'Rourke", "url": "https://tannerorourke.dev" },
+  "license": "MIT",
+  "keywords": ["agents", "ml-research", "mcp", "workflow", "research-lab"]
+}

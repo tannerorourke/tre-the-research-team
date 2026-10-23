@@ -1,25 +1,29 @@
-# Triad
+# TRE
 
 **A three-agent ML research system that lives on your repository.**
 
-Triad puts a Research Scientist, a Tech Lead, and a Developer on top of any git repo plus a `docs/` notebook. You talk to the Scientist and the Lead; the Developer works under the Lead. Every role runs typed workflow graphs — built on a purpose-built graph engine over the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) — and everything they learn, decide, build, and conclude lands in the notebook and a research knowledge graph with full lineage: hypothesis → experiment → result.
+TRE puts a Research Scientist, a Tech Lead, and a Developer on top of any git repo plus a `docs/` notebook. You speak to the Scientist and the Lead from a Claude Code session through the TRE plugin; the Developer works under the Lead; a loopback daemon (`tre serve`) runs the workflows as supervised workers so a study outlives any session. Every role runs typed workflow graphs — built on a purpose-built graph engine over the [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) — and everything they learn, decide, build, and conclude lands in the notebook and a research knowledge graph with full lineage: hypothesis → experiment → result.
 
-```text
-you ──── chat ────┬── Research Scientist ── owns the science
-                  │     literature · hypotheses · pre-registered designs
-                  │     analysis · interpretation · red-teaming
-                  │
-                  └── Tech Lead ─────────── owns the engineering
-                        recon · ADRs · ticket DAGs · code review · integration
-                              │
-                              └── Developer(s) ── implement under the Lead
-                                    TDD · bounded debug loops · self-review
-                                    parallel via git worktrees
+```mermaid
+graph TD
+    you["you, in Claude Code"] --> rs(["Research Scientist"])
+    you --> tl(["Tech Lead"])
+    tl --> dev(["Developer(s)"])
+    rs --> nb[("docs/ notebook + knowledge graph")]
+    tl --> nb
+    dev --> repo["your repository"]
+    dev --> nb
 ```
+
+| Role | Owns | How |
+| --- | --- | --- |
+| Research Scientist | the science | literature, falsifiable hypotheses, pre-registered designs, analysis, interpretation, red-teaming |
+| Tech Lead | the engineering | repo recon, ADRs, ticket DAGs, diff-level code review, integration |
+| Developer(s) | one ticket each, under the Lead | tests first, engine-run suites, bounded debug loops, structured self-review; parallel in isolated git worktrees |
 
 ## Why graphs
 
-Agent quality comes from structure, not vibes. Each workflow is an explicit directed graph: typed pydantic state with reducer semantics, deterministic edges, conditional routers, bounded loops, per-node retries, human approval gates, and a checkpoint after every step — so any run (including one paused at a gate, or one that died mid-flight) resumes exactly where it stopped. Fan-out happens inside map nodes with bounded concurrency, so the graph stays deterministic while searches, paper annotations, and Developer tickets run in parallel. Every graph exports to Mermaid (`triad graph study`, or the committed exports in [`docs/graphs/`](docs/graphs)).
+Agent quality comes from structure, not vibes. Each workflow is an explicit directed graph: typed pydantic state with reducer semantics, deterministic edges, conditional routers, bounded loops, per-node retries, human approval gates, and a checkpoint after every step — so any run (including one paused at a gate, or one that died mid-flight) resumes exactly where it stopped. Fan-out happens inside map nodes with bounded concurrency, so the graph stays deterministic while searches, paper annotations, and Developer tickets run in parallel. Every graph exports to Mermaid (`tre graph study`, or the committed exports in [`assets/`](assets)).
 
 The second graph is the **research knowledge graph** (`docs/knowledge/graph.db`): papers, hypotheses, experiments, results, tickets, and ADRs as typed nodes, with `tests`, `supports`, `refutes`, `implements`, `depends_on` edges. "What evidence bears on HYP-002?" is one lineage query, and every workflow maintains it as it works.
 
@@ -27,19 +31,19 @@ The second graph is the **research knowledge graph** (`docs/knowledge/graph.db`)
 
 | workflow       | owner     | graph                                           | what happens                                                                                                                                                                                                                                                                                  |
 | -------------- | --------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `literature` | Scientist | [`literature.mmd`](docs/graphs/literature.mmd) | query planning → parallel arXiv + Semantic Scholar + HF Papers search → triage against explicit criteria → full-text deep read of top papers → one structured note per paper (parallel) → synthesis → adversarial self-critique loop → notes, review, and citations persisted          |
-| `design`     | Scientist | [`design.mmd`](docs/graphs/design.mmd)         | 3 candidate hypotheses (falsifiability, predicted effect, novelty/tractability/impact scores) → pre-registered design (baselines, ablations, seeds, power, stop criteria) → **Tech Lead feasibility review loop** → **human approval gate** → HYP/EXP registered              |
-| `plan`       | Lead      | [`plan.mmd`](docs/graphs/plan.mmd)             | repo recon → ADR → 2–6 tickets with verifiable acceptance criteria, test plans, and dependencies → dependency waves computed                                                                                                                                                              |
-| `execute`    | Lead      | [`execute.mmd`](docs/graphs/execute.mmd)       | **human go/no-go** → per wave: parallel Developers in isolated git worktrees → Lead reviews real diffs against a fixed rubric → bounded fix rounds (a blocked Developer's question gets answered in review comments) → merge + full test suite → integration report                |
-| `ticket`     | Developer | [`ticket.mmd`](docs/graphs/ticket.mmd)         | one ticket: gather context → plan → tests-first implementation → engine-run test suite (the agent never grades its own homework) → bounded debug loop → structured self-review → commit + hand-off                                                                                      |
-| `analysis`   | Scientist | [`analysis.mmd`](docs/graphs/analysis.mmd)     | load results → data-integrity check → **deterministic statistics in code** (means, CIs, Cohen's d, bootstrap — models interpret, code computes) → interpretation against the pre-registered falsification criteria → red-team pass → report, statuses, and supports/refutes edges |
-| `study`      | all       | [`study.mmd`](docs/graphs/study.mmd)           | the full loop: literature → design → plan → execute → analysis → retro, then **iterate** (with a sharpened focus) or **conclude** — bounded, gated, resumable                                                                                                               |
+| `literature` | Scientist | [`literature.mmd`](assets/literature.mmd) | query planning → parallel arXiv + Semantic Scholar + HF Papers search → triage against explicit criteria → full-text deep read of top papers → one structured note per paper (parallel) → synthesis → adversarial self-critique loop → notes, review, and citations persisted          |
+| `design`     | Scientist | [`design.mmd`](assets/design.mmd)         | 3 candidate hypotheses (falsifiability, predicted effect, novelty/tractability/impact scores) → pre-registered design (baselines, ablations, seeds, power, stop criteria) → **Tech Lead feasibility review loop** → **human approval gate** → HYP/EXP registered              |
+| `plan`       | Lead      | [`plan.mmd`](assets/plan.mmd)             | repo recon → ADR → 2–6 tickets with verifiable acceptance criteria, test plans, and dependencies → dependency waves computed                                                                                                                                                              |
+| `execute`    | Lead      | [`execute.mmd`](assets/execute.mmd)       | **human go/no-go** → per wave: parallel Developers in isolated git worktrees → Lead reviews real diffs against a fixed rubric → bounded fix rounds (a blocked Developer's question gets answered in review comments) → merge + full test suite → integration report                |
+| `ticket`     | Developer | [`ticket.mmd`](assets/ticket.mmd)         | one ticket: gather context → plan → tests-first implementation → engine-run test suite (the agent never grades its own homework) → bounded debug loop → structured self-review → commit + hand-off                                                                                      |
+| `analysis`   | Scientist | [`analysis.mmd`](assets/analysis.mmd)     | load results → data-integrity check → **deterministic statistics in code** (means, CIs, Cohen's d, bootstrap — models interpret, code computes) → interpretation against the pre-registered falsification criteria → red-team pass → report, statuses, and supports/refutes edges |
+| `study`      | all       | [`study.mmd`](assets/study.mmd)           | the full loop: literature → design → plan → execute → analysis → retro, then **iterate** (with a sharpened focus) or **conclude** — bounded, gated, resumable                                                                                                               |
 
 Techniques wired in where they earn their keep: best-of-N hypothesis generation with explicit scoring, reflexion-style self-critique loops, adversarial red-teaming of conclusions, plan-then-execute decomposition, TDD with execution feedback, cross-role review contracts, structured outputs validated at the SDK layer, deterministic code for all arithmetic, and cost accounting per node.
 
 ## The graphs
 
-Every workflow is a graph, and every graph ships as a Mermaid file under [`docs/graphs/`](docs/graphs): one per workflow, plus `knowledge.mmd` for the research knowledge graph. `triad graph <workflow>` prints one; `triad graph --export` rewrites the whole folder from the current code, so the files are the generated record of what the engine runs.
+Every workflow is a graph, and every graph ships as a Mermaid file under [`assets/`](assets): one per workflow, plus `knowledge.mmd` for the research knowledge graph. `tre graph <workflow>` prints one; `tre graph --export --out assets` regenerates this folder from the current code, so the files are the generated record of what the engine runs. Without `--out`, the export lands in the attached repository's `docs/graphs/`.
 
 Node shapes carry the node kind: `([ ])` is an agent turn, `[[ ]]` a tool or code node, `{ }` a human gate, `[ ]` glue. The study graph splices the five phase graphs (literature, design, plan, execute, analysis) into one checkpointed run, with a retro that iterates or concludes:
 
@@ -148,55 +152,80 @@ flowchart TD
     classDef term fill:#0f172a,stroke:#0f172a,color:#f8fafc
 ```
 
-`knowledge.mmd` is the knowledge graph of a fresh `triad init`: the type legend and no nodes. It fills as workflows register papers, hypotheses, experiments, tickets, and reports.
+`knowledge.mmd` is the knowledge graph of a fresh `tre init`: the type legend and no nodes. It fills as workflows register papers, hypotheses, experiments, tickets, and reports.
 
 ## Quickstart
 
 ```bash
 pip install -e .                      # from this repo; Python 3.10+
-export ANTHROPIC_API_KEY=...
-
-cd ~/code/my-research-repo
-triad init .                          # docs/ notebook + knowledge graph + config
-
-triad chat                            # talk to the Scientist and the Lead
-triad run literature "does curriculum ordering improve sample efficiency in RLHF?"
-triad run design     "curriculum ordering in RLHF"
-triad run plan       EXP-001
-triad run execute    EXP-001
-triad run analysis   EXP-001
-
-triad run study "does curriculum ordering improve sample efficiency in RLHF?"   # or all of it
+tre serve                           # the daemon: one per machine, loopback only (127.0.0.1:8765)
 ```
 
-Runs stream progress live. A gate pauses the run and asks you; if you walk away, resume any time:
+`contrib/tre.service` runs the daemon as a systemd user unit; its header holds the install commands. Workers authenticate the way Claude Code does on the machine, or through `ANTHROPIC_API_KEY`.
+
+Then, in Claude Code, load the plugin from this checkout (`claude --plugin-dir /path/to/tre`), or attach the daemon to any project with `claude mcp add --transport http tre http://127.0.0.1:8765/mcp`. Ask for a TRE run in plain words; the `tre` skill registers the repository, starts the workflow, watches it to its exit line, and brings each gate to you as a question. The `research-scientist` and `tech-lead` skills put the session in either role's charter for the conversation around a run.
+
+The same runs work from a terminal, streaming live and prompting at gates:
 
 ```bash
-triad run study --resume 20260806-142355-study --answer des_approve_design=yes
-triad run study "..." --yes           # headless: auto-approve all gates
-triad status                          # runs, states, gates, costs
-triad costs                           # spend by workflow
-triad standup                         # today's summary from runs + notebook
-triad graph study                     # Mermaid for any workflow
+cd ~/code/my-research-repo
+tre init .                          # docs/ notebook + knowledge graph + config
+
+tre run literature "does curriculum ordering improve sample efficiency in RLHF?"
+tre run design     "curriculum ordering in RLHF"
+tre run plan       EXP-001
+tre run execute    EXP-001
+tre run analysis   EXP-001
+tre run study "does curriculum ordering improve sample efficiency in RLHF?"   # or all of it
+
+tre run study --resume 20260806-142355-study --answer des_approve_design=yes   # a gate paused it; answer later
+tre run study "..." --yes           # auto-approve all gates
+tre run design "..." --headless     # no prompt: a gate ends the process with exit 3 and status waiting_gate
+tre wait <run_id>                   # block until the run leaves running, then print its exit line
+tre status [<run_id> --json]        # runs, states, gates, costs
+tre costs                           # spend by workflow
+tre standup                         # today's summary from runs + notebook
+tre graph study                     # Mermaid for any workflow
 ```
 
-In chat: plain messages auto-route (rules first, small-model router on ambiguity), `@rs`/`@tl` address someone directly, `@both` convenes the pair — the Scientist drafts, the Lead adds the engineering take. `/run`, `/standup`, `/status`, `/costs`, `/graph` work inline. Both principals hold persistent sessions primed with the current notebook digest, and check the notebook/knowledge graph/repo through tools before asserting project state.
+## Serve and the plugin
+
+`tre serve` is a supervisor over durable files, exposed as an MCP server on streamable HTTP. Each run is a `tre run --headless` worker in its own process group; the daemon holds pids and a registry of repository roots (`~/.tre/registry.json`), and everything else lives under `<repo>/.tre/runs/<run_id>/` (`meta.json`, `state.json`, `steps.jsonl`, `events.jsonl`, `worker.json`). A daemon restart rescans the disk: live workers are adopted, a run whose worker died is relaunched once from its checkpoint, and a run waiting at a gate keeps waiting. A gate ends the worker with status `waiting_gate`; `run_answer` starts a resume worker, and the engine's once-per-visit answer queue is untouched.
+
+Every run ends on one line its launcher writes, which is what a watcher looks for:
+
+```text
+[tre] <run_id> exit <code> status=<status> gate=<gate or ->
+```
+
+`tre wait <run_id> -p <repo>` blocks until that line, through `queued` and `running`, and exits 0 on `completed`, 3 on `waiting_gate`, 1 otherwise; when the worker's pid is gone for two polls it prints `status=died` and exits 1 without writing, since recording `died` is the daemon's job. The plugin's `tre` skill arms one Monitor per run on that command plus a fail-safe cron that calls `run_status`, and never relies on a push from the daemon: silence is never read as success.
+
+| Surface | Names |
+| --- | --- |
+| run tools | `repo_register`, `repo_list`, `run_start`, `run_status`, `run_answer`, `run_cancel`, `run_list`, `costs`, `standup` |
+| notebook and knowledge-graph tools | the thirteen `lab` tools agents also use, each taking a registered `repo`: paper search and fetch, notebook create, read, append, set status, list, knowledge-graph add node, link, query, lineage, repo map, read-only git |
+| resources | `tre://repos`, `tre://gates` (every run waiting at a gate, with its message), `tre://runs/{run_id}/events?tail=N` |
+| skills | `tre` (the operating loop), `research-scientist` and `tech-lead` (the charters, generated from `tre/agents/personas.py` by `tre plugin-sync`, with a test that fails on drift) |
+
+The daemon binds loopback only and refuses any other host. It is one Anthropic identity and one bill; the global cap on live workers is `[serve] max_concurrent_runs` in `~/.tre/config.toml` (default 2), and runs past it queue.
 
 ## The notebook convention
 
+```mermaid
+graph LR
+    docs["docs/"] --> charter["charter.md"]
+    docs --> lit["literature/ LIT"]
+    docs --> hyp["hypotheses/ HYP"]
+    docs --> exp["experiments/ EXP"]
+    docs --> adr["decisions/ ADR"]
+    docs --> tck["tickets/ TCK"]
+    docs --> rep["reports/ REP"]
+    docs --> standups["standups/"]
+    docs --> kg[("knowledge/graph.db")]
+    docs --> graphs["graphs/*.mmd"]
 ```
-docs/
-├── charter.md            # the study's single source of truth + running journal
-├── literature/LIT-...      # one structured note per paper
-├── hypotheses/HYP-...      # statement, rationale, falsification criteria, status
-├── experiments/EXP-...     # pre-registration + append-only log; results in runs/EXP-.../
-├── decisions/ADR-...       # architecture decision records
-├── tickets/TCK-...         # goal, acceptance criteria, test plan, activity trail
-├── reports/REP-...         # literature reviews, analyses, integration reports
-├── standups/             # generated daily summaries
-├── knowledge/graph.db    # the research knowledge graph (SQLite + JSON export)
-└── graphs/*.mmd          # Mermaid exports of the workflow graphs
-```
+
+`charter.md` is the study's single source of truth plus a running journal. Each entry kind has a folder and an ID prefix: one structured note per paper, a hypothesis with its falsification criteria and status, an experiment's pre-registration plus append-only log (results under `experiments/runs/EXP-.../`), architecture decision records, tickets with acceptance criteria and test plans, and reports. `standups/` holds generated daily summaries; `knowledge/graph.db` is the knowledge graph (SQLite plus JSON export); `graphs/` holds the Mermaid exports.
 
 Entries carry flat frontmatter (id, status, links) and `[[ID]]` cross-links; INDEX.md files are generated, never hand-edited. Humans edit the notebook freely — it's markdown; agents read and write it through tools. Statuses move honestly: a hypothesis ends `supported`, `refuted`, or `inconclusive`, never quietly forgotten.
 
@@ -206,14 +235,13 @@ Agent turns run under deny-by-default hooks regardless of prompt content: no `gi
 
 ## Configuration
 
-`.triad/config.toml` (written by `triad init`, every key optional):
+`.tre/config.toml` (written by `tre init`, every key optional):
 
 ```toml
 [models]
 research_scientist = "sonnet"    # any Claude alias or full model ID per role
 tech_lead = "sonnet"
 developer = "sonnet"
-router = "haiku"
 
 [autonomy]
 gates = true                     # human approval gates on/off
@@ -231,23 +259,34 @@ top_k_notes = 10                 # papers that get structured notes
 
 ## Extending
 
-A new workflow is ~100 lines: define a `GraphState` subclass, add nodes (`agent_step(...)` for persona turns with a pydantic output contract, plain async functions for tool nodes), wire edges/branches/gates, register it in `triad/workflows/__init__.py`. New agent tools go in `triad/tools/server.py` (`@tool` + one entry in `LAB_TOOL_NAMES`). New personas are a system prompt plus a `Persona` entry. The engine (`triad/graph/`) is ~600 lines you own end to end — no framework underneath.
+A new workflow is ~100 lines: define a `GraphState` subclass, add nodes (`agent_step(...)` for persona turns with a pydantic output contract, plain async functions for tool nodes), wire edges/branches/gates, register it in `tre/workflows/__init__.py`. New agent tools are one `LabTool` entry in `tre/tools/lab_tools.py`; the SDK in-process server and the daemon both register the same list. New personas are a system prompt plus a `Persona` entry. The engine (`tre/graph/`) is ~600 lines you own end to end — no framework underneath.
 
 Tests run fully offline: `MockRuntime` swaps for the SDK, canned papers swap for the network, and the whole study loop executes in under a second (`pytest -q`).
 
 ## Layout
 
-```text
-src/triad/
-├── graph/        # the engine: state+reducers, graphs, runner, checkpoints, events, parallel maps
-├── agents/       # personas (role charters), typed schemas (the contracts), SDK/mock runtimes
-├── workflows/    # literature, design, planning, developer, execution, analysis, study
-├── tools/        # papers (arXiv/S2/HF), repo+worktrees, deterministic stats, MCP server
-├── memory/       # notebook (templates, IDs, indexes) + knowledge graph (SQLite)
-├── chat/         # routed two-principal chat sessions + standup
-├── templates/    # notebook entry templates
-├── lab.py        # context bootstrap
-└── cli.py        # triad init/chat/run/graph/status/costs/standup
+Arrows are imports inside `src/tre/`; `config.py` is read everywhere and `templates/` holds the notebook entry templates `memory/` renders.
+
+```mermaid
+graph TD
+    cli["cli.py"] --> lab["lab.py"]
+    cli --> wf["workflows/"]
+    cli --> serve["serve/"]
+    cli --> plugin["plugin.py"]
+    lab --> engine["graph/"]
+    lab --> memory["memory/"]
+    lab --> agents["agents/"]
+    wf --> engine
+    wf --> agents
+    wf --> tools["tools/"]
+    serve --> engine
+    serve --> lab
+    serve --> tools
+    plugin --> agents
+    agents --> tools
+    tools --> memory
 ```
+
+Beside the package: `tests/` (offline on `MockRuntime`, canned papers, and a stub worker; the daemon tests run over real streamable HTTP), `assets/` (the Mermaid exports), `skills/` (the plugin's three skills), `contrib/tre.service`, and `examples/walkthrough.md`.
 
 MIT license.

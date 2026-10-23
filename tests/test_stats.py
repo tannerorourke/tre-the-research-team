@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from triad.tools.stats import (bootstrap_diff_ci, ci95, cohens_d, describe,
+from tre.tools.stats import (bootstrap_diff_ci, ci95, cohens_d, describe,
                                extract_series, mean)
 
 

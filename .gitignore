@@ -5,8 +5,8 @@ __pycache__/
 .pytest_cache/
 dist/
 build/
-.triad/runs/
-.triad/state/
+.tre/runs/
+.tre/state/
 *.db-wal
 *.db-shm
 .DS_Store

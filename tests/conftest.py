@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from triad.agents.runtime import MockRuntime
-from triad.agents import schemas as S
-from triad.config import TriadConfig
-from triad.graph import Context, Emitter, RunStore
-from triad.memory import KnowledgeGraph, LabNotebook
+from tre.agents.runtime import MockRuntime
+from tre.agents import schemas as S
+from tre.config import TreConfig
+from tre.graph import Context, Emitter, RunStore
+from tre.memory import KnowledgeGraph, LabNotebook
 
 CANNED_KEYS = ["paperalpha", "paperbeta", "papergamma"]
 
@@ -85,13 +85,11 @@ def schema_factory(persona, prompt, schema, node):
                          notes="holds")
     if schema is S.Retro:
         return S.Retro(decision="conclude", reasoning="question answered enough")
-    if schema is S.RouteDecision:
-        return S.RouteDecision(target="rs", reason="science")
     raise AssertionError(f"schema_factory: unhandled schema {schema}")
 
 
 def make_ctx(tmp_path, runtime=None, gates=False):
-    config = TriadConfig()
+    config = TreConfig()
     config.autonomy.gates = gates
     store = RunStore(tmp_path)
     emitter = Emitter(sink=lambda rid, ev: store.append_event(rid, ev) if rid else None)

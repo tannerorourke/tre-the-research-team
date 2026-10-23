@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from triad.workflows import WORKFLOWS
-from triad.workflows.study import StudyState, build_study
+from tre.workflows import WORKFLOWS
+from tre.workflows.study import StudyState, build_study
 
 
 def test_all_workflows_validate_and_render():

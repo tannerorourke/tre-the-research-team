@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import Field
 
-from triad.graph import (END, Graph, GraphError, GraphState, Replace, Runner,
+from tre.graph import (END, Graph, GraphError, GraphState, Replace, Runner,
                          START, parallel_map, split_errors)
 
 

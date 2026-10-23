@@ -1,0 +1,27 @@
+# TRE MCP daemon as a systemd user unit: one loopback server per machine that
+# supervises runs across registered repositories.
+#
+#   cp contrib/tre.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload && systemctl --user enable --now tre
+#   journalctl --user -u tre -f
+#   loginctl enable-linger "$USER"     # keep it running with no login session
+#
+# ExecStart assumes 'tre' at ~/.local/bin (uv tool install, pipx); point it at
+# 'command -v tre' otherwise. Workers need ANTHROPIC_API_KEY, read from ~/.tre/env.
+
+[Unit]
+Description=TRE MCP daemon (loopback, streamable HTTP)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/tre serve --host 127.0.0.1 --port 8765
+EnvironmentFile=-%h/.tre/env
+Restart=on-failure
+RestartSec=5
+# -- workers run in their own sessions and outlive a daemon restart; the next
+#    daemon's rescan adopts the live ones and relaunches the dead ones once
+KillMode=process
+
+[Install]
+WantedBy=default.target
